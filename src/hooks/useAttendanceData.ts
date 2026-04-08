@@ -82,7 +82,8 @@ const fetchTodayAbsenteeism = async (): Promise<TodayStats> => {
     nextday2.setDate(nextday2.getDate()+3)
     tomorrow.setDate(tomorrow.getDate() + 1);
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3000); // 3s timeout
+    // Give Render more time to cold-start / respond, especially on free tier
+    const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
     
     // Fetch all 3 predictions in parallel (not sequential)
     const [res, res1, res2] = await Promise.all([
@@ -92,17 +93,27 @@ const fetchTodayAbsenteeism = async (): Promise<TodayStats> => {
     ]);
     clearTimeout(timeout);
     
-    if (res.ok && res1.ok && res2.ok) {
-      const [data, data1, data2] = await Promise.all([res.json(), res1.json(), res2.json()]);
+    const [data, data1, data2] = await Promise.all([
+      res.ok ? res.json() : Promise.resolve(null),
+      res1.ok ? res1.json() : Promise.resolve(null),
+      res2.ok ? res2.json() : Promise.resolve(null),
+    ]);
+
+    if (data && typeof data.predicted_absentees_percentage === 'string') {
       predictedAbsenteeism = parseFloat(data.predicted_absentees_percentage.replace('%', ''));
       predicted = Math.round((predictedAbsenteeism / 100) * TOTAL_EMPLOYEES);
+    }
+    if (data1 && typeof data1.predicted_absentees_percentage === 'string') {
       predictedAbsenteeism1 = parseFloat(data1.predicted_absentees_percentage.replace('%', ''));
       predicted1 = Math.round((predictedAbsenteeism1 / 100) * TOTAL_EMPLOYEES);
+    }
+    if (data2 && typeof data2.predicted_absentees_percentage === 'string') {
       predictedAbsenteeism2 = parseFloat(data2.predicted_absentees_percentage.replace('%', ''));
       predicted2 = Math.round((predictedAbsenteeism2 / 100) * TOTAL_EMPLOYEES);
     }
-  } catch {
-    // API down — leave at 0
+  } catch (err) {
+    // API down / timeout — leave predictions at 0 but log for debugging
+    console.warn('Prediction API error, using 0 fallback:', err);
   }
 
   return {
