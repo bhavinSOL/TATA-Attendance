@@ -1,0 +1,200 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* TATA Motors Corporate Design System */
+
+@layer base {
+  :root {
+    /* TATA Motors brand colors */
+    --background: 220 20% 97%;
+    --foreground: 225 50% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 225 50% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 225 50% 15%;
+
+    /* TATA Blue */
+    --primary: 225 100% 19%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 15% 92%;
+    --secondary-foreground: 225 50% 15%;
+
+    --muted: 220 15% 95%;
+    --muted-foreground: 220 10% 45%;
+
+    --accent: 210 100% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 220 13% 88%;
+    --input: 220 13% 88%;
+    --ring: 225 100% 19%;
+
+    --radius: 0.75rem;
+
+    /* Chart colors */
+    --chart-1: 225 100% 19%;
+    --chart-2: 210 100% 50%;
+    --chart-3: 142 76% 36%;
+    --chart-4: 38 92% 50%;
+    --chart-5: 0 72% 51%;
+
+    --sidebar-background: 225 100% 19%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 210 100% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 225 80% 25%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 225 60% 30%;
+    --sidebar-ring: 210 100% 60%;
+  }
+
+  .dark {
+    --background: 225 50% 8%;
+    --foreground: 0 0% 95%;
+
+    --card: 225 40% 12%;
+    --card-foreground: 0 0% 95%;
+
+    --popover: 225 40% 12%;
+    --popover-foreground: 0 0% 95%;
+
+    --primary: 210 100% 55%;
+    --primary-foreground: 225 50% 10%;
+
+    --secondary: 225 30% 18%;
+    --secondary-foreground: 0 0% 95%;
+
+    --muted: 225 30% 18%;
+    --muted-foreground: 220 10% 60%;
+
+    --accent: 210 100% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 70% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 90% 55%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 225 30% 22%;
+    --input: 225 30% 22%;
+    --ring: 210 100% 55%;
+
+    --sidebar-background: 225 50% 6%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 210 100% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 225 40% 15%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 225 30% 18%;
+    --sidebar-ring: 210 100% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .stat-card {
+    @apply bg-card rounded-xl border border-border p-4 sm:p-6 shadow-sm transition-all duration-300 hover:shadow-md;
+  }
+
+  .stat-value {
+    @apply text-2xl sm:text-3xl font-bold text-foreground;
+  }
+
+  .stat-label {
+    @apply text-sm font-medium text-muted-foreground;
+  }
+
+  .nav-link {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors;
+  }
+
+  .nav-link-active {
+    @apply bg-sidebar-accent text-sidebar-foreground font-medium;
+  }
+
+  .page-title {
+    @apply text-xl sm:text-2xl font-bold text-foreground tracking-tight;
+  }
+
+  .section-title {
+    @apply text-lg font-semibold text-foreground;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
+  }
+
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-sm border border-border rounded-xl shadow-sm;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.5s ease-out forwards;
+  }
+
+  .animate-pulse-slow {
+    animation: pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+}
