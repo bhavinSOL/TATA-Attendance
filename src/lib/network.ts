@@ -2,4 +2,4 @@ const runtimeHost = typeof window !== 'undefined' ? window.location.hostname : '
 
 export const API_BASE =
   (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.trim()) ||
-  '/ml-api';
+  'https://attendance-ml-api-8sqi.onrender.com';
