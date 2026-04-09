@@ -118,7 +118,7 @@ export async function fetchCalendarCSV(): Promise<CalendarRow[]> {
 }
 
 // API base URL for predictions
-const API_BASE = 'http://127.0.0.1:8000';
+const API_BASE = 'https://attendance-ml-api-8sqi.onrender.com';
 
 // Fetch predicted value from your API for a specific date
 export async function fetchDayPrediction(dateStr: string): Promise<number | null> {
