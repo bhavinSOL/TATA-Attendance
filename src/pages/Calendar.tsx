@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar as CalendarIcon, Save, Edit, ChevronLeft, ChevronRight, Download, Image } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { CSVService, type CalendarData, fetchDayPrediction, fetchAttendanceCSV, invalidateCalendarCache } from '@/lib/csvService';
+import { CSVService, type CalendarData, fetchDayPrediction, fetchAttendanceCSV, invalidateCalendarCache, saveCalendarCSVToFile } from '@/lib/csvService';
 import { downloadChartAsImage } from '@/lib/downloadUtils';
 
 const Calendar = () => {
@@ -129,7 +129,7 @@ const Calendar = () => {
       setCalendarData(updatedData);
 
       // Save directly to CSV file
-      const ok = await CSVService.saveToFile(updatedData);
+      const ok = await saveCalendarCSVToFile(updatedData);
       invalidateCalendarCache();
 
       if (ok) {

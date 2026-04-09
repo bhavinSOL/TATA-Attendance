@@ -1,5 +1,4 @@
 // CSV Service - Fetches real data from attendance.csv and 2026_calander.csv
-import { API_BASE } from '@/lib/network';
 
 // Helper: format Date to YYYY-MM-DD using local time (avoids UTC shift from toISOString)
 export function toLocalDateStr(d: Date): string {
@@ -31,9 +30,9 @@ export interface CalendarRow {
 
 export interface ChartData {
   date: string;
-  absenteeism: number | null;
-  predicted: number | null;
-  actual: number | null;
+  absenteeism: number;
+  predicted: number;
+  actual: number;
 }
 
 // Parse "1-Jan-26" -> "2026-01-01" (YYYY-MM-DD)
@@ -57,26 +56,17 @@ function parseDateStr(dateStr: string): string {
   return `${year}-${month}-${day}`;
 }
 
-// Simple in-memory CSV caches (avoids redundant network fetches)
-let _attendanceCache: AttendanceRow[] | null = null;
-let _calendarCache: CalendarRow[] | null = null;
-
-// Invalidate caches so next fetch re-reads from disk
-export function invalidateAttendanceCache() { _attendanceCache = null; }
-export function invalidateCalendarCache() { _calendarCache = null; }
-
 // Fetch and parse attendance.csv (historical data with actual absent_percent)
 export async function fetchAttendanceCSV(): Promise<AttendanceRow[]> {
-  if (_attendanceCache) return _attendanceCache;
   try {
-    const response = await fetch('https://raw.githubusercontent.com/bhavinSOL/TATA-Attendance/refs/heads/main/public/attendance.csv');
+    const response = await fetch('/attendance.csv');
     if (!response.ok) throw new Error(`Failed to fetch attendance.csv: ${response.status}`);
     
     const text = await response.text();
     const lines = text.trim().split('\n');
     
     // Skip header line
-    const result = lines.slice(1).map(line => {
+    return lines.slice(1).map(line => {
       const values = line.split(',').map(v => v.trim());
       const absentStr = values[8];
       const absentPercent = absentStr && absentStr !== '' ? parseFloat(absentStr) : null;
@@ -93,8 +83,6 @@ export async function fetchAttendanceCSV(): Promise<AttendanceRow[]> {
         absent_percent: absentPercent,
       };
     });
-    _attendanceCache = result;
-    return result;
   } catch (error) {
     console.error('Error fetching attendance.csv:', error);
     return [];
@@ -103,15 +91,14 @@ export async function fetchAttendanceCSV(): Promise<AttendanceRow[]> {
 
 // Fetch and parse 2026_calander.csv (calendar data for future predictions)
 export async function fetchCalendarCSV(): Promise<CalendarRow[]> {
-  if (_calendarCache) return _calendarCache;
   try {
-    const response = await fetch('https://raw.githubusercontent.com/bhavinSOL/TATA-Attendance/refs/heads/main/public/2026_calander.csv');
+    const response = await fetch('/2026_calander.csv');
     if (!response.ok) throw new Error(`Failed to fetch 2026_calander.csv: ${response.status}`);
     
     const text = await response.text();
     const lines = text.trim().split('\n');
     
-    const result = lines.slice(1).map(line => {
+    return lines.slice(1).map(line => {
       const values = line.split(',').map(v => v.trim());
       return {
         date: parseDateStr(values[0]),
@@ -124,19 +111,20 @@ export async function fetchCalendarCSV(): Promise<CalendarRow[]> {
         festival_name: values[7] || '',
       };
     });
-    _calendarCache = result;
-    return result;
   } catch (error) {
     console.error('Error fetching 2026_calander.csv:', error);
     return [];
   }
 }
 
+// API base URL for predictions
+const API_BASE = 'http://127.0.0.1:8000';
+
 // Fetch predicted value from your API for a specific date
 export async function fetchDayPrediction(dateStr: string): Promise<number | null> {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+    const timeout = setTimeout(() => controller.abort(), 5000); // 5s timeout
     const res = await fetch(`${API_BASE}/predict/day?date=${dateStr}`, { signal: controller.signal });
     clearTimeout(timeout);
     if (!res.ok) throw new Error(`predict/day failed: ${res.status}`);
@@ -151,10 +139,7 @@ export async function fetchDayPrediction(dateStr: string): Promise<number | null
 // Fetch predicted values for a date range from your API
 async function fetchRangePrediction(startDate: string, endDate: string): Promise<Record<string, number>> {
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000); // 30s for large ranges
-    const res = await fetch(`${API_BASE}/predict/range?start_date=${startDate}&end_date=${endDate}`, { signal: controller.signal });
-    clearTimeout(timeout);
+    const res = await fetch(`${API_BASE}/predict/range?start_date=${startDate}&end_date=${endDate}`);
     if (!res.ok) throw new Error(`predict/range failed: ${res.status}`);
     const data: Array<{ date: string; predicted_absentees_percentage: string }> = await res.json();
     
@@ -169,32 +154,26 @@ async function fetchRangePrediction(startDate: string, endDate: string): Promise
 }
 
 // Fetch week prediction from API
-async function fetchWeekPrediction(startDate: string): Promise<number | null> {
+async function fetchWeekPrediction(startDate: string): Promise<number> {
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(`${API_BASE}/predict/week?start_date=${startDate}`, { signal: controller.signal });
-    clearTimeout(timeout);
+    const res = await fetch(`${API_BASE}/predict/week?start_date=${startDate}`);
     if (!res.ok) throw new Error(`predict/week failed: ${res.status}`);
     const data = await res.json();
     return parseFloat(data.average_week_absentees_percentage.replace('%', ''));
   } catch {
-    return null;
+    return 0;
   }
 }
 
 // Fetch month prediction from API
-async function fetchMonthPrediction(year: number, month: number): Promise<number | null> {
+async function fetchMonthPrediction(year: number, month: number): Promise<number> {
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(`${API_BASE}/predict/month?year=${year}&month=${month}`, { signal: controller.signal });
-    clearTimeout(timeout);
+    const res = await fetch(`${API_BASE}/predict/month?year=${year}&month=${month}`);
     if (!res.ok) throw new Error(`predict/month failed: ${res.status}`);
     const data = await res.json();
     return parseFloat(data.average_month_absentees_percentage.replace('%', ''));
   } catch {
-    return null;
+    return 0;
   }
 }
 
@@ -205,6 +184,7 @@ async function fetchMonthPrediction(year: number, month: number): Promise<number
 // Prepare DAILY chart data from attendance.csv + API predictions
 export async function getDailyChartData(viewDate: Date): Promise<ChartData[]> {
   const attendance = await fetchAttendanceCSV();
+  const calendar = await fetchCalendarCSV();
   
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -229,7 +209,7 @@ export async function getDailyChartData(viewDate: Date): Promise<ChartData[]> {
   // Fetch predictions from your API for the date range
   const predictionsMap = await fetchRangePrediction(startStr, endStr);
   
-  // Build all dates in range
+  // Build all dates in range from calendar + attendance data
   const allDates: string[] = [];
   for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
     allDates.push(toLocalDateStr(d));
@@ -241,13 +221,13 @@ export async function getDailyChartData(viewDate: Date): Promise<ChartData[]> {
     dateObj.setHours(0, 0, 0, 0);
     
     const actualValue = actualMap[dateStr];
-    const predictedValue = predictionsMap[dateStr] ?? null;
+    const predictedValue = predictionsMap[dateStr] || 0;
     const hasActual = actualValue !== undefined && dateObj <= today;
     
     return {
       date: dateStr,
-      absenteeism: hasActual ? actualValue : null,
-      actual: hasActual ? actualValue : null,
+      absenteeism: hasActual ? actualValue : 0,
+      actual: hasActual ? actualValue : 0,
       predicted: predictedValue,
     };
   });
@@ -262,62 +242,50 @@ export async function getWeeklyChartData(viewDate: Date): Promise<ChartData[]> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
-  const currentYear = today.getFullYear();
-  const currentMonth = today.getMonth(); // 0-based
+  // Determine current week's Sunday start
+  const currentWeekStart = new Date(today);
+  currentWeekStart.setDate(today.getDate() - today.getDay());
+  currentWeekStart.setHours(0, 0, 0, 0);
+  const currentWeekStartStr = toLocalDateStr(currentWeekStart);
   
-  // First and last day of the current month
-  const monthStart = new Date(currentYear, currentMonth, 1);
-  const monthEnd = new Date(currentYear, currentMonth + 1, 0);
-  
-  // Collect all weeks from current month's first week to last week
-  const weeks: { weekStart: Date; weekEnd: Date; weekStartStr: string; weekEndStr: string }[] = [];
-  const firstSunday = new Date(monthStart);
-  firstSunday.setDate(firstSunday.getDate() - firstSunday.getDay());
-  
-  for (let d = new Date(firstSunday); d <= monthEnd; d.setDate(d.getDate() + 7)) {
-    const weekStart = new Date(d);
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-    weeks.push({
-      weekStart, weekEnd,
-      weekStartStr: toLocalDateStr(weekStart),
-      weekEndStr: toLocalDateStr(weekEnd),
-    });
-  }
-  
-  // Use /predict/range for the entire span (single API call, proven endpoint)
-  const rangeStart = weeks[0].weekStartStr;
-  const rangeEnd = weeks[weeks.length - 1].weekEndStr;
-  const predictionsMap = await fetchRangePrediction(rangeStart, rangeEnd);
-  
+  // Show 6 weeks before and 6 weeks after viewDate
   const chartData: ChartData[] = [];
   
-  for (let idx = 0; idx < weeks.length; idx++) {
-    const { weekStart, weekStartStr, weekEndStr } = weeks[idx];
-    const weekRows = attendance.filter(row =>
-      row.date >= weekStartStr && row.date <= weekEndStr &&
-      row.absent_percent !== null && !isNaN(row.absent_percent)
-    );
-    const hasActual = weekRows.length > 0 && weekStart <= today;
-    const actualAvg = hasActual
-      ? Math.round((weekRows.reduce((sum, r) => sum + (r.absent_percent || 0), 0) / weekRows.length) * 100) / 100
-      : null;
+  for (let i = -6; i <= 6; i++) {
+    const weekStart = new Date(viewDate);
+    weekStart.setDate(viewDate.getDate() + (i * 7));
+    // Align to Sunday (start of week)
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
     
-    // Average daily predictions for this week from range data
-    const weekPredictions: number[] = [];
-    for (let wd = new Date(weekStart); wd <= weeks[idx].weekEnd; wd.setDate(wd.getDate() + 1)) {
-      const ds = toLocalDateStr(wd);
-      if (predictionsMap[ds] !== undefined) weekPredictions.push(predictionsMap[ds]);
-    }
-    const predictedAvg = weekPredictions.length > 0
-      ? Math.round((weekPredictions.reduce((s, v) => s + v, 0) / weekPredictions.length) * 100) / 100
-      : null;
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    
+    const weekStartStr = toLocalDateStr(weekStart);
+    const weekEndStr = toLocalDateStr(weekEnd);
+    
+    // Calculate actual average from attendance.csv for this week
+    const weekRows = attendance.filter(row => {
+      return row.date >= weekStartStr && row.date <= weekEndStr && 
+             row.absent_percent !== null && !isNaN(row.absent_percent) &&
+             row.absent_percent < 50; // Filter out holidays (90%+ values)
+    });
+    
+    const hasActual = weekRows.length > 0 && weekStart <= today;
+    const actualAvg = hasActual 
+      ? Math.round((weekRows.reduce((sum, r) => sum + (r.absent_percent || 0), 0) / weekRows.length) * 100) / 100
+      : 0;
+    
+    // Only predict for the current week — don't go far into the future
+    const isCurrentWeek = weekStartStr === currentWeekStartStr;
+    const predicted = isCurrentWeek ? await fetchWeekPrediction(weekStartStr) : 0;
+    
+    const label = `Week ${weekStartStr}`;
     
     chartData.push({
-      date: `Week ${weekStartStr}`,
+      date: label,
       absenteeism: actualAvg,
-      actual: actualAvg,
-      predicted: predictedAvg,
+      actual: hasActual ? actualAvg : 0,
+      predicted: predicted,
     });
   }
   
@@ -331,55 +299,44 @@ export async function getMonthlyChartData(viewDate: Date): Promise<ChartData[]> 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth() + 1;
+  
   const chartData: ChartData[] = [];
   
-  // Previous month, current month, next month (3 total)
-  const months: { monthDate: Date; year: number; month: number; monthStr: string }[] = [];
-  for (let i = -1; i <= 1; i++) {
-    const monthDate = new Date(today.getFullYear(), today.getMonth() + i, 1);
+  // Show 6 months before and 6 months after viewDate
+  for (let i = -6; i <= 6; i++) {
+    const monthDate = new Date(viewDate);
+    monthDate.setMonth(viewDate.getMonth() + i);
+    
     const year = monthDate.getFullYear();
     const month = monthDate.getMonth() + 1;
     const monthStr = `${year}-${month.toString().padStart(2, '0')}`;
-    months.push({ monthDate, year, month, monthStr });
-  }
-
-  // Use /predict/range for the entire 3-month span (single API call, proven endpoint)
-  const firstMonth = months[0];
-  const lastMonth = months[months.length - 1];
-  const rangeStart = `${firstMonth.monthStr}-01`;
-  const lastDay = new Date(lastMonth.year, lastMonth.month, 0).getDate();
-  const rangeEnd = `${lastMonth.monthStr}-${String(lastDay).padStart(2, '0')}`;
-  const predictionsMap = await fetchRangePrediction(rangeStart, rangeEnd);
-  
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-  for (let idx = 0; idx < months.length; idx++) {
-    const { monthDate, month, monthStr, year } = months[idx];
-    const monthRows = attendance.filter(row =>
-      row.date.startsWith(monthStr) &&
-      row.absent_percent !== null && !isNaN(row.absent_percent)
-    );
+    
+    // Calculate actual average from attendance.csv for this month
+    const monthRows = attendance.filter(row => {
+      return row.date.startsWith(monthStr) && 
+             row.absent_percent !== null && !isNaN(row.absent_percent) &&
+             row.absent_percent < 50; // Filter out holidays
+    });
+    
     const hasActual = monthRows.length > 0 && monthDate <= today;
     const actualAvg = hasActual
       ? Math.round((monthRows.reduce((sum, r) => sum + (r.absent_percent || 0), 0) / monthRows.length) * 100) / 100
-      : null;
+      : 0;
     
-    // Average daily predictions for this month from range data
-    const daysInMonth = new Date(year, month, 0).getDate();
-    const monthPredictions: number[] = [];
-    for (let d = 1; d <= daysInMonth; d++) {
-      const ds = `${monthStr}-${String(d).padStart(2, '0')}`;
-      if (predictionsMap[ds] !== undefined) monthPredictions.push(predictionsMap[ds]);
-    }
-    const predictedAvg = monthPredictions.length > 0
-      ? Math.round((monthPredictions.reduce((s, v) => s + v, 0) / monthPredictions.length) * 100) / 100
-      : null;
+    // Only predict for the current month — don't go far into the future
+    const isCurrentMonth = year === currentYear && month === currentMonth;
+    const predicted = isCurrentMonth ? await fetchMonthPrediction(year, month) : 0;
+    
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const label = `${monthNames[month - 1]} ${year}`;
     
     chartData.push({
-      date: `${monthNames[month - 1]} ${year}`,
+      date: label,
       absenteeism: actualAvg,
-      actual: actualAvg,
-      predicted: predictedAvg,
+      actual: hasActual ? actualAvg : 0,
+      predicted: predicted,
     });
   }
   
@@ -400,20 +357,6 @@ export interface CalendarData {
   is_festival: number;
   festival_weight: number;
   festival_name: string;
-}
-
-// Save CSV content to public/ folder via Vite dev server middleware
-export async function saveCSVToFile(filename: string, content: string): Promise<boolean> {
-  try {
-    const res = await fetch('/api/save-csv', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filename, content }),
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
 }
 
 const CALENDAR_EDITS_KEY = 'calendar_edits';
@@ -521,4 +464,104 @@ export class CSVService {
   static clearEdits(): void {
     localStorage.removeItem(CALENDAR_EDITS_KEY);
   }
+}
+
+// ==========================================
+// GITHUB INTEGRATION: Save CSV files to GitHub
+// ==========================================
+
+const API_BASE_URL = process.env.REACT_APP_API_BASE || 'http://127.0.0.1:8000';
+
+/**
+ * Save CSV file to GitHub repository
+ * Falls back to local download if GitHub API fails
+ */
+export async function saveCSVToFile(filename: string, csvContent: string, forceDownload = false): Promise<boolean> {
+  if (forceDownload) {
+    // Force download without trying GitHub
+    downloadCSV(filename, csvContent);
+    return false;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/github/update-csv`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        filename: filename,
+        content: csvContent,
+        message: `Update ${filename} - ${new Date().toLocaleString()}`,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      console.log(`✅ ${filename} saved to GitHub`);
+      return true;
+    } else if (result.fallback) {
+      console.warn(`⚠️ GitHub save failed, suggesting download fallback: ${result.error}`);
+      downloadCSV(filename, csvContent);
+      return false;
+    }
+
+    return false;
+  } catch (error) {
+    console.error(`Error saving to GitHub: ${error}`);
+    // Fallback to download
+    downloadCSV(filename, csvContent);
+    return false;
+  }
+}
+
+/**
+ * Save calendar CSV to GitHub
+ */
+export async function saveCalendarCSVToFile(data: CalendarData[]): Promise<boolean> {
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const toCSVDate = (isoDate: string) => {
+    const [y, m, d] = isoDate.split('-');
+    return `${parseInt(d)}-${monthNames[parseInt(m) - 1]}-${y.slice(2)}`;
+  };
+
+  const header = 'date,day_of_week,week_number,month,is_holiday,is_festival,festival_weight,festival_name';
+  const lines = data.map(r =>
+    `${toCSVDate(r.date)},${r.day_of_week},${r.week_number},${r.month},${r.is_holiday},${r.is_festival},${r.festival_weight},${r.festival_name || ''}`
+  );
+  const csvContent = [header, ...lines].join('\n');
+
+  return await saveCSVToFile('2026_calander.csv', csvContent);
+}
+
+/**
+ * Helper function to download CSV as fallback
+ */
+function downloadCSV(filename: string, content: string): void {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Invalidate calendar cache (if using cache)
+ */
+export function invalidateCalendarCache(): void {
+  // Optional: Clear any caches if implemented
+  console.log('Calendar cache invalidated');
+}
+
+/**
+ * Invalidate attendance cache (if using cache)
+ */
+export function invalidateAttendanceCache(): void {
+  // Optional: Clear any caches if implemented
+  console.log('Attendance cache invalidated');
 }
