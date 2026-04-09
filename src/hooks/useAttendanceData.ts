@@ -67,7 +67,7 @@ const fetchTodayAbsenteeism = async (): Promise<TodayStats> => {
   const absentToday = Math.round((absenteeism / 100) * TOTAL_EMPLOYEES);
   const presentToday = TOTAL_EMPLOYEES - absentToday;
 
-  // 2) Fetch tomorrow's prediction from API (all 3 in parallel with shared timeout)
+  // 2) Fetch tomorrow's prediction from API (sequential - one by one)
   let predictedAbsenteeism = 0;
   let predictedAbsenteeism1 = 0;
   let predictedAbsenteeism2 = 0;
@@ -81,38 +81,62 @@ const fetchTodayAbsenteeism = async (): Promise<TodayStats> => {
     nextday1.setDate(nextday1.getDate()+2)
     nextday2.setDate(nextday2.getDate()+3)
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const controller = new AbortController();
-    // Give Render more time to cold-start / respond, especially on free tier
-    const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
-    
-    // Fetch all 3 predictions in parallel (not sequential)
-    const [res, res1, res2] = await Promise.all([
-      fetch(`${API_BASE}/predict/day?date=${toLocalDateStr(tomorrow)}`, { signal: controller.signal }),
-      fetch(`${API_BASE}/predict/day?date=${toLocalDateStr(nextday1)}`, { signal: controller.signal }),
-      fetch(`${API_BASE}/predict/day?date=${toLocalDateStr(nextday2)}`, { signal: controller.signal }),
-    ]);
-    clearTimeout(timeout);
-    
-    const [data, data1, data2] = await Promise.all([
-      res.ok ? res.json() : Promise.resolve(null),
-      res1.ok ? res1.json() : Promise.resolve(null),
-      res2.ok ? res2.json() : Promise.resolve(null),
-    ]);
 
-    if (data && typeof data.predicted_absentees_percentage === 'string') {
-      predictedAbsenteeism = parseFloat(data.predicted_absentees_percentage.replace('%', ''));
-      predicted = Math.round((predictedAbsenteeism / 100) * TOTAL_EMPLOYEES);
+    // Fetch predictions sequentially (one at a time) to avoid cancellations
+    // Each request gets its own timeout
+
+    // Request 1: Tomorrow
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      const res = await fetch(`${API_BASE}/predict/day?date=${toLocalDateStr(tomorrow)}`, { signal: controller.signal });
+      clearTimeout(timeout);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && typeof data.predicted_absentees_percentage === 'string') {
+          predictedAbsenteeism = parseFloat(data.predicted_absentees_percentage.replace('%', ''));
+          predicted = Math.round((predictedAbsenteeism / 100) * TOTAL_EMPLOYEES);
+        }
+      }
+    } catch (err) {
+      console.warn('Request 1 failed:', err);
     }
-    if (data1 && typeof data1.predicted_absentees_percentage === 'string') {
-      predictedAbsenteeism1 = parseFloat(data1.predicted_absentees_percentage.replace('%', ''));
-      predicted1 = Math.round((predictedAbsenteeism1 / 100) * TOTAL_EMPLOYEES);
+
+    // Request 2: Day+2
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      const res1 = await fetch(`${API_BASE}/predict/day?date=${toLocalDateStr(nextday1)}`, { signal: controller.signal });
+      clearTimeout(timeout);
+      if (res1.ok) {
+        const data1 = await res1.json();
+        if (data1 && typeof data1.predicted_absentees_percentage === 'string') {
+          predictedAbsenteeism1 = parseFloat(data1.predicted_absentees_percentage.replace('%', ''));
+          predicted1 = Math.round((predictedAbsenteeism1 / 100) * TOTAL_EMPLOYEES);
+        }
+      }
+    } catch (err) {
+      console.warn('Request 2 failed:', err);
     }
-    if (data2 && typeof data2.predicted_absentees_percentage === 'string') {
-      predictedAbsenteeism2 = parseFloat(data2.predicted_absentees_percentage.replace('%', ''));
-      predicted2 = Math.round((predictedAbsenteeism2 / 100) * TOTAL_EMPLOYEES);
+
+    // Request 3: Day+3
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      const res2 = await fetch(`${API_BASE}/predict/day?date=${toLocalDateStr(nextday2)}`, { signal: controller.signal });
+      clearTimeout(timeout);
+      if (res2.ok) {
+        const data2 = await res2.json();
+        if (data2 && typeof data2.predicted_absentees_percentage === 'string') {
+          predictedAbsenteeism2 = parseFloat(data2.predicted_absentees_percentage.replace('%', ''));
+          predicted2 = Math.round((predictedAbsenteeism2 / 100) * TOTAL_EMPLOYEES);
+        }
+      }
+    } catch (err) {
+      console.warn('Request 3 failed:', err);
     }
   } catch (err) {
-    // API down / timeout — leave predictions at 0 but log for debugging
+    // Fallback error handler
     console.warn('Prediction API error, using 0 fallback:', err);
   }
 
