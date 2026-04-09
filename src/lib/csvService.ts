@@ -267,6 +267,9 @@ export async function getWeeklyChartData(viewDate: Date): Promise<ChartData[]> {
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
 
+    // Only include weeks that have significant overlap with this month
+    if (weekEnd < monthStart || weekStart > monthEnd) continue;
+
     const weekStartStr = toLocalDateStr(weekStart);
     const weekEndStr = toLocalDateStr(weekEnd);
 
@@ -355,16 +358,6 @@ export async function getMonthlyChartData(viewDate: Date): Promise<ChartData[]> 
     });
   }
 
-  return chartData;
-}
-    chartData.push({
-      date: label,
-      absenteeism: actualAvg,
-      actual: hasActual ? actualAvg : 0,
-      predicted: predicted,
-    });
-  }
-  
   return chartData;
 }
 
