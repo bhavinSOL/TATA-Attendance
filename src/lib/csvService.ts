@@ -1,5 +1,7 @@
 // CSV Service - Fetches real data from attendance.csv and 2026_calander.csv
 
+import { API_BASE } from '@/lib/network';
+
 // Helper: format Date to YYYY-MM-DD using local time (avoids UTC shift from toISOString)
 export function toLocalDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -118,8 +120,6 @@ export async function fetchCalendarCSV(): Promise<CalendarRow[]> {
 }
 
 // API base URL for predictions
-const API_BASE = 'https://attendance-ml-api-8sqi.onrender.com';
-
 // Fetch predicted value from your API for a specific date
 export async function fetchDayPrediction(dateStr: string): Promise<number | null> {
   try {
@@ -470,8 +470,6 @@ export class CSVService {
 // GITHUB INTEGRATION: Save CSV files to GitHub
 // ==========================================
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE || 'http://127.0.0.1:8000';
-
 /**
  * Save CSV file to GitHub repository
  * Falls back to local download if GitHub API fails
@@ -484,7 +482,7 @@ export async function saveCSVToFile(filename: string, csvContent: string, forceD
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/github/update-csv`, {
+    const response = await fetch(`${API_BASE}/github/update-csv`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
