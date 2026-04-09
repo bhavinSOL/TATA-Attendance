@@ -10,7 +10,6 @@ import Predictions from "./pages/Predictions";
 import Calendar from "./pages/Calendar";
 import Notifications from "./pages/Notifications";
 import Admin from "./pages/Admin";
-import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import ChatWidget from "./components/ChatWidget";
 
@@ -41,7 +40,6 @@ const AppRoutes = () => {
       <Route path="/predictions" element={<ProtectedRoute><Predictions /></ProtectedRoute>} />
       <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-      <Route path="/settings" element={<AdminRoute><Settings /></AdminRoute>} />
       <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>

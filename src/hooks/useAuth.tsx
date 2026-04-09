@@ -14,7 +14,6 @@ interface AuthContextType {
   isAdmin: boolean;
   login: (role: UserRole, password?: string) => boolean;
   logout: () => void;
-  changePassword: (oldPassword: string, newPassword: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -23,11 +22,9 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   login: () => false,
   logout: () => {},
-  changePassword: () => false,
 });
 
-let ADMIN_PASSWORD = 'admin123';
-const ADMIN_PASSWORD_STORAGE_KEY = 'tata_admin_password';
+const ADMIN_PASSWORD = 'admin123';
 const AUTH_STORAGE_KEY = 'tata_attendance_auth';
 
 // Predefined users
@@ -47,7 +44,7 @@ const USERS: Record<UserRole, AuthUser> = {
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
 
-  // Restore session from localStorage and load saved password
+  // Restore session from localStorage
   useEffect(() => {
     const stored = localStorage.getItem(AUTH_STORAGE_KEY);
     if (stored) {
@@ -59,12 +56,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } catch {
         localStorage.removeItem(AUTH_STORAGE_KEY);
       }
-    }
-
-    // Load saved admin password if exists
-    const savedPassword = localStorage.getItem(ADMIN_PASSWORD_STORAGE_KEY);
-    if (savedPassword) {
-      ADMIN_PASSWORD = savedPassword;
     }
   }, []);
 
@@ -83,28 +74,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     localStorage.removeItem(AUTH_STORAGE_KEY);
   };
 
-  const changePassword = (oldPassword: string, newPassword: string): boolean => {
-    // Only admin can change password
-    if (user?.role !== 'admin') return false;
-
-    // Verify old password
-    if (oldPassword !== ADMIN_PASSWORD) return false;
-
-    // Validate new password (at least 6 characters)
-    if (newPassword.length < 6) return false;
-
-    // New password cannot be same as old
-    if (oldPassword === newPassword) return false;
-
-    // Update in-memory password
-    ADMIN_PASSWORD = newPassword;
-
-    // Save to localStorage
-    localStorage.setItem(ADMIN_PASSWORD_STORAGE_KEY, newPassword);
-
-    return true;
-  };
-
   return (
     <AuthContext.Provider
       value={{
@@ -113,7 +82,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         isAdmin: user?.role === 'admin',
         login,
         logout,
-        changePassword,
       }}
     >
       {children}

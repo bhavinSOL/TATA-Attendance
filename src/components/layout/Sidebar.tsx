@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Settings as SettingsIcon, Calendar, FileText, TrendingUp, Bell, LogOut, X, Gear } from 'lucide-react';
+import { LayoutDashboard, Settings, Calendar, FileText, TrendingUp, Bell, LogOut, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 const allNavItems = [
@@ -7,8 +7,7 @@ const allNavItems = [
   { path: '/predictions', label: 'Predictions', icon: TrendingUp, adminOnly: false },
   { path: '/calendar', label: 'Calendar', icon: Calendar, adminOnly: false },
   { path: '/notifications', label: 'Notifications', icon: Bell, adminOnly: false },
-  { path: '/admin', label: 'Admin Panel', icon: SettingsIcon, adminOnly: true },
-  { path: '/settings', label: 'Settings', icon: Gear, adminOnly: true },
+  { path: '/admin', label: 'Admin Panel', icon: Settings, adminOnly: true },
 ];
 
 interface SidebarProps {

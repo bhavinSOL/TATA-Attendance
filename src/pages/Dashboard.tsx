@@ -9,9 +9,21 @@ import { useTodayStats } from '@/hooks/useAttendanceData';
 import { Users, UserCheck, UserX, Target, TrendingUp } from 'lucide-react';
 import { toLocalDateStr, type ChartData } from '@/lib/csvService';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useState, useEffect } from 'react';
 
 const Dashboard = () => {
   const { data: stats, isLoading } = useTodayStats();
+  const [showCharts, setShowCharts] = useState(false);
+
+  // Stagger chart loading: show stats first, then charts after 500ms delay
+  useEffect(() => {
+    if (!isLoading) {
+      const timer = setTimeout(() => {
+        setShowCharts(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading]);
 
   return (
     <Layout>
@@ -81,11 +93,19 @@ const Dashboard = () => {
         </div>
 
         {/* Charts */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 mb-8">
-          <AttendanceChart />
-          <RecentPredictions />
-          <PredictionAccuracy />
-        </div>
+        {showCharts ? (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 mb-8">
+            <AttendanceChart />
+            <RecentPredictions />
+            <PredictionAccuracy />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 mb-8">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-96" />
+            ))}
+          </div>
+        )}
 
         {/* Accuracy Chart */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
