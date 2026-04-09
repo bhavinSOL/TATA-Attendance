@@ -177,8 +177,10 @@ export const useTodayStats = () => {
   return useQuery({
     queryKey: ['todayStats'],
     queryFn: fetchTodayAbsenteeism,
-    retry: 1,
+    retry: 3, // Retry 3 times before giving up
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
     staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // Cache for 10 minutes
   });
 };
 
@@ -190,8 +192,10 @@ export const useAttendanceData = (period: 'day' | 'week' | 'month', viewDate?: D
   return useQuery({
     queryKey: ['attendance', period, dateKey],
     queryFn: () => fetchAttendanceByPeriod(period, viewDate || new Date('2026-02-12')),
-    retry: 1,
+    retry: 3, // Retry 3 times
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
     staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // Cache for 10 minutes
   });
 };
 
