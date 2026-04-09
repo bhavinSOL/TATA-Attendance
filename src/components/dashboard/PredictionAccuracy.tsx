@@ -28,8 +28,12 @@ interface AccuracyEntry {
 export const PredictionAccuracy = () => {
   const [data, setData] = useState<AccuracyEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const chartRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  const MAX_RETRIES = 3;
 
   const handleDownloadImage = async () => {
     if (!chartRef.current) return;
@@ -46,8 +50,10 @@ export const PredictionAccuracy = () => {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+
+    const fetchData = async () => {
       try {
+        setError(null);
         const rows = await fetchAttendanceCSV();
         const today = toLocalDateStr(new Date());
         const withActual = rows.filter(r => r.absent_percent !== null && r.date <= today);
@@ -58,21 +64,35 @@ export const PredictionAccuracy = () => {
         const endDate = last7[last7.length - 1].date;
 
         let predictionsMap: Record<string, number> = {};
-        try {
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 10000);
-          const res = await fetch(
-            `${API_BASE}/predict/range?start_date=${startDate}&end_date=${endDate}`,
-            { signal: controller.signal }
-          );
-          clearTimeout(timeout);
-          if (res.ok) {
-            const json: Array<{ date: string; predicted_absentees_percentage: string }> = await res.json();
-            json.forEach(item => {
-              predictionsMap[item.date] = parseFloat(item.predicted_absentees_percentage.replace('%', ''));
-            });
+        let attempts = 0;
+        let success = false;
+
+        // Retry logic for predictions
+        while (attempts < MAX_RETRIES && !success && !cancelled) {
+          try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 20000);
+            const res = await fetch(
+              `${API_BASE}/predict/range?start_date=${startDate}&end_date=${endDate}`,
+              { signal: controller.signal }
+            );
+            clearTimeout(timeout);
+            if (res.ok) {
+              const json: Array<{ date: string; predicted_absentees_percentage: string }> = await res.json();
+              json.forEach(item => {
+                predictionsMap[item.date] = parseFloat(item.predicted_absentees_percentage.replace('%', ''));
+              });
+              success = true;
+            } else {
+              attempts++;
+              if (attempts < MAX_RETRIES) await new Promise(r => setTimeout(r, 1000 * attempts));
+            }
+          } catch (err) {
+            attempts++;
+            if (attempts < MAX_RETRIES) await new Promise(r => setTimeout(r, 1000 * attempts));
+            else throw err;
           }
-        } catch { /* API down */ }
+        }
 
         if (cancelled) return;
 
@@ -88,14 +108,25 @@ export const PredictionAccuracy = () => {
           });
 
         setData(entries);
+        setRetryCount(0);
       } catch (err) {
         console.error('PredictionAccuracy error:', err);
+        setError('Failed to load predictions. Retrying...');
+
+        // Auto-retry after delay
+        if (retryCount < MAX_RETRIES) {
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+          }, 2000);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
-    })();
+    };
+
+    fetchData();
     return () => { cancelled = true; };
-  }, []);
+  }, [retryCount]);
 
   const getBarColor = (accuracy: number) => {
     if (accuracy >= 95) return 'hsl(var(--success))';
@@ -122,6 +153,11 @@ export const PredictionAccuracy = () => {
         )}
       </CardHeader>
       <CardContent>
+        {error && (
+          <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 rounded text-sm text-yellow-800">
+            {error} {retryCount}/{MAX_RETRIES}
+          </div>
+        )}
         {loading ? (
           <Skeleton className="h-[250px] w-full rounded-lg" />
         ) : data.length === 0 ? (

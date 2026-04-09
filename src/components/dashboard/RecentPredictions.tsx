@@ -20,7 +20,11 @@ interface DayComparison {
 export const RecentPredictions = () => {
   const [data, setData] = useState<DayComparison[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const { toast } = useToast();
+
+  const MAX_RETRIES = 3;
 
   const handleDownloadCSV = () => {
     if (data.length === 0) return;
@@ -37,8 +41,10 @@ export const RecentPredictions = () => {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+
+    const fetchData = async () => {
       try {
+        setError(null);
         // 1) Get last 7 days with actual data from CSV
         const rows = await fetchAttendanceCSV();
         const today = toLocalDateStr(new Date());
@@ -51,24 +57,35 @@ export const RecentPredictions = () => {
         const startDate = last7[0].date;
         const endDate = last7[last7.length - 1].date;
 
-        // 2) Fetch ML predictions for same range
+        // 2) Fetch ML predictions for same range with retry
         let predictionsMap: Record<string, number> = {};
-        try {
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 10000);
-          const res = await fetch(
-            `${API_BASE}/predict/range?start_date=${startDate}&end_date=${endDate}`,
-            { signal: controller.signal }
-          );
-          clearTimeout(timeout);
-          if (res.ok) {
-            const json: Array<{ date: string; predicted_absentees_percentage: string }> = await res.json();
-            json.forEach((item) => {
-              predictionsMap[item.date] = parseFloat(item.predicted_absentees_percentage.replace('%', ''));
-            });
+        let attempts = 0;
+        let success = false;
+
+        while (attempts < MAX_RETRIES && !success && !cancelled) {
+          try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 20000);
+            const res = await fetch(
+              `${API_BASE}/predict/range?start_date=${startDate}&end_date=${endDate}`,
+              { signal: controller.signal }
+            );
+            clearTimeout(timeout);
+            if (res.ok) {
+              const json: Array<{ date: string; predicted_absentees_percentage: string }> = await res.json();
+              json.forEach((item) => {
+                predictionsMap[item.date] = parseFloat(item.predicted_absentees_percentage.replace('%', ''));
+              });
+              success = true;
+            } else {
+              attempts++;
+              if (attempts < MAX_RETRIES) await new Promise(r => setTimeout(r, 1000 * attempts));
+            }
+          } catch (err) {
+            attempts++;
+            if (attempts < MAX_RETRIES) await new Promise(r => setTimeout(r, 1000 * attempts));
+            else throw err;
           }
-        } catch {
-          // API down — predictions stay empty
         }
 
         // 3) Build comparison
@@ -93,14 +110,25 @@ export const RecentPredictions = () => {
           .reverse(); // newest first
 
         setData(comparisons);
+        setRetryCount(0);
       } catch (err) {
         console.error('RecentPredictions error:', err);
+        setError('Failed to load predictions. Retrying...');
+
+        // Auto-retry after delay
+        if (retryCount < MAX_RETRIES) {
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+          }, 2000);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
-    })();
+    };
+
+    fetchData();
     return () => { cancelled = true; };
-  }, []);
+  }, [retryCount]);
 
   const confidenceBadge = (c: DayComparison['confidence']) => {
     switch (c) {
@@ -128,6 +156,11 @@ export const RecentPredictions = () => {
         )}
       </CardHeader>
       <CardContent>
+        {error && (
+          <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 rounded text-sm text-yellow-800">
+            {error} {retryCount}/{MAX_RETRIES}
+          </div>
+        )}
         {loading ? (
           <div className="space-y-3">
             {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
