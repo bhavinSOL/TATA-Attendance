@@ -15,7 +15,7 @@ import {
   TableRow
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, Image, FileSpreadsheet, Save, Eye, Pencil, Search, CalendarCheck, ClipboardCheck } from 'lucide-react';
+import { Download, Image, FileSpreadsheet, Save, Eye, Pencil, Search, CalendarCheck, ClipboardCheck, Rocket, Github, Cloud } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { fetchAttendanceCSV, fetchCalendarCSV, invalidateAttendanceCache, invalidateCalendarCache, toLocalDateStr, saveCSVToFile, type AttendanceRow, type CalendarRow } from '@/lib/csvService';
 import { AttendanceChart } from '@/components/dashboard/AttendanceChart';
@@ -534,6 +534,60 @@ const Admin = () => {
                 <Image className="mr-2 h-4 w-4" />
                 Download Chart as Image
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ========== SECTION 1.5: Deployment Tutorial ========== */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 section-title">
+              <Rocket className="h-5 w-5" /> Deployment Steps (Render, Vercel, GitHub)
+            </CardTitle>
+            <CardDescription>
+              Admin reference guide for publishing this portal online.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="rounded-xl border p-4 bg-muted/20">
+                <h3 className="font-semibold flex items-center gap-2 mb-2">
+                  <Cloud className="h-4 w-4 text-primary" /> Vercel Deploy
+                </h3>
+                <ol className="list-decimal pl-5 space-y-2 text-sm text-muted-foreground">
+                  <li>Code ko GitHub repo me push karein.</li>
+                  <li>Vercel Dashboard me New Project choose karein.</li>
+                  <li>GitHub repo import karein and framework as Vite detect hone dein.</li>
+                  <li>Build command: npm run build, Output: dist set karein.</li>
+                  <li>Deploy click karein aur generated URL verify karein.</li>
+                </ol>
+              </div>
+
+              <div className="rounded-xl border p-4 bg-muted/20">
+                <h3 className="font-semibold flex items-center gap-2 mb-2">
+                  <Rocket className="h-4 w-4 text-primary" /> Render Deploy
+                </h3>
+                <ol className="list-decimal pl-5 space-y-2 text-sm text-muted-foreground">
+                  <li>Render me New + se Static Site create karein.</li>
+                  <li>GitHub repository connect karein.</li>
+                  <li>Build command: npm install ; npm run build use karein.</li>
+                  <li>Publish directory: dist set karein.</li>
+                  <li>Auto Deploy enable karke production URL test karein.</li>
+                </ol>
+              </div>
+
+              <div className="rounded-xl border p-4 bg-muted/20">
+                <h3 className="font-semibold flex items-center gap-2 mb-2">
+                  <Github className="h-4 w-4 text-primary" /> GitHub Workflow
+                </h3>
+                <ol className="list-decimal pl-5 space-y-2 text-sm text-muted-foreground">
+                  <li>Feature branch banayein aur changes commit karein.</li>
+                  <li>Pull Request raise karke review approvals lein.</li>
+                  <li>PR merge hone ke baad deployment trigger check karein.</li>
+                  <li>GitHub Actions logs me build success confirm karein.</li>
+                  <li>Release notes me latest portal updates document karein.</li>
+                </ol>
+              </div>
             </div>
           </CardContent>
         </Card>
