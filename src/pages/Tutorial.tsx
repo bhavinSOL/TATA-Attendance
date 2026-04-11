@@ -6,27 +6,33 @@ import { Button } from '@/components/ui/button';
 import { BookOpenText, ExternalLink, PlayCircle } from 'lucide-react';
 
 const quickSteps = [
-  'Login karein aur Dashboard par daily summary dekhein.',
-  'Predictions tab me date/range select karke absenteeism forecast check karein.',
-  'Calendar me holiday aur festival patterns verify karein.',
-  'Notifications me high-risk days ke alerts track karein.',
-  'Admin (sirf admin users) se CSV data update/download karein.',
+  // 'Login karein aur Dashboard par daily summary dekhein.',
+  'Do Login and see the daily summary on Dashboard.',
+  // 'Predictions tab me date/range select karke absenteeism forecast check karein.',
+  'Check the absenteeism forecast by selecting date/range in Predictions tab.',
+  // 'Calendar me holiday aur festival patterns verify karein.',
+  'Verify holiday and festival patterns in the Calendar.',
+  // 'Notifications me high-risk days ke alerts track karein.',
+  'Track alerts for high-risk days in Notifications.',
+  // 'Admin (sirf admin users) se CSV data update/download karein.',
+  'Update/Download the CSV data from the Admin (only for admin users)'
 ];
 
 const screenshots = [
   {
     title: 'Attendance Trend Overview',
-    description: 'Dashboard style chart jisse aap quickly attendance behavior samajh sakte hain.',
+    description: 'A dashboard-style chart that helps you qquickly understand attendance behavior.',
+    
     src: '/attendance_chart.png',
   },
   {
     title: 'Pattern Snapshot 1',
-    description: 'Historical trend ka additional screenshot for quick comparison.',
+    description: 'An additional screenshot of Historical trend for quick comparison.',
     src: '/attendance_chart (1).png',
   },
   {
     title: 'Pattern Snapshot 2',
-    description: 'Alternative chart view for reporting aur presentation use-cases.',
+    description: 'Alternative chart view for reporting or presentation use-cases.',
     src: '/attendance_chart (2).png',
   },
 ];
@@ -36,7 +42,7 @@ const Tutorial = () => {
     <Layout>
       <Header
         title="Portal Tutorial"
-        subtitle="Is portal ko step-by-step kaise use karein"
+        subtitle="How to use this portal step by step"
       />
 
       <div className="p-4 md:p-8 space-y-8">
@@ -46,7 +52,7 @@ const Tutorial = () => {
               <BookOpenText className="h-5 w-5 text-primary" /> Quick Start Guide
             </CardTitle>
             <CardDescription>
-              Naye users ke liye short walkthrough jo daily usage flow cover karta hai.
+              A short walkthrough for new users.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -64,7 +70,7 @@ const Tutorial = () => {
           <CardHeader>
             <CardTitle className="section-title">Tutorial Video</CardTitle>
             <CardDescription>
-              End-to-end usage dekhne ke liye video walkthrough play karein.
+              Play the video walkthrough to see the end-to-end usage.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -79,7 +85,7 @@ const Tutorial = () => {
               />
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <Badge variant="secondary" className="text-xs">Tip: Apna custom tutorial video bhi embed kar sakte hain</Badge>
+              <Badge variant="secondary" className="text-xs">Tip:</Badge>
               <Button asChild variant="outline" size="sm">
                 <a href="https://www.youtube.com/watch?v=ysz5S6PUM-U" target="_blank" rel="noreferrer">
                   <PlayCircle className="mr-2 h-4 w-4" /> Open Video in New Tab
@@ -93,7 +99,7 @@ const Tutorial = () => {
           <CardHeader>
             <CardTitle className="section-title">Screenshots Walkthrough</CardTitle>
             <CardDescription>
-              Important screens ka visual reference for training and onboarding.
+              Important screens's visual reference for training and onboarding.
             </CardDescription>
           </CardHeader>
           <CardContent>
